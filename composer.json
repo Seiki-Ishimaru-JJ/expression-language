@@ -17,6 +17,7 @@
     ],
     "require": {
         "php": ">=7.2.5",
+        "ext-bcmath": "*",
         "symfony/cache": "^4.4|^5.0|^6.0",
         "symfony/service-contracts": "^1.1|^2|^3"
     },

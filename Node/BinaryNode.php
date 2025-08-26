@@ -124,45 +124,45 @@ class BinaryNode extends Node
             case '&':
                 return $left & $right;
             case '==':
-                return $left == $right;
+                return bccomp($left, $right, 9) === 0;
             case '===':
-                return $left === $right;
+                return bccomp($left, $right, 9) === 0 && gettype($left) === gettype($right);
             case '!=':
-                return $left != $right;
+                return bccomp($left, $right, 9) !== 0;
             case '!==':
-                return $left !== $right;
+                return bccomp($left, $right, 9) !== 0;
             case '<':
-                return $left < $right;
+                return bccomp($left, $right, 9) === -1;
             case '>':
-                return $left > $right;
+                return bccomp($left, $right, 9) === 1;
             case '>=':
-                return $left >= $right;
+                return bccomp($left, $right, 9) >= 0;
             case '<=':
-                return $left <= $right;
+                return bccomp($left, $right, 9) <= 0;
             case 'not in':
                 return !\in_array($left, $right);
             case 'in':
                 return \in_array($left, $right);
             case '+':
-                return $left + $right;
+                return bcadd($left, $right, 9);
             case '-':
-                return $left - $right;
+                return bcsub($left, $right, 9);
             case '~':
                 return $left.$right;
             case '*':
-                return $left * $right;
+                return bcmul($left, $right, 9);
             case '/':
                 if (0 == $right) {
                     throw new \DivisionByZeroError('Division by zero.');
                 }
-
-                return $left / $right;
+                [$quot, $_] = bcdiv($left, $right, 9);
+                return $quot;
             case '%':
                 if (0 == $right) {
                     throw new \DivisionByZeroError('Modulo by zero.');
                 }
-
-                return $left % $right;
+                [$_, $rem] = bcdiv($left, $right, 9);
+                return $rem;
             case 'matches':
                 return $this->evaluateMatches($right, $left);
         }
