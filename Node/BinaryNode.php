@@ -21,6 +21,8 @@ use Symfony\Component\ExpressionLanguage\SyntaxError;
  */
 class BinaryNode extends Node
 {
+    public const SCALE = 9;
+
     private const OPERATORS = [
         '~' => '.',
         'and' => '&&',
@@ -74,6 +76,16 @@ class BinaryNode extends Node
             return;
         }
 
+        if ('~~' === $operator) {
+            $compiler
+                ->compile($this->nodes['left'])
+                ->raw('(')
+                ->compile($this->nodes['right'])
+                ->raw(')')
+            ;
+            return;
+        }
+
         if (isset(self::OPERATORS[$operator])) {
             $operator = self::OPERATORS[$operator];
         }
@@ -116,6 +128,10 @@ class BinaryNode extends Node
 
         $right = $this->nodes['right']->evaluate($functions, $values);
 
+        // Calculate scale from decimal point position
+        $leftScale = (strpos((string)$left, '.') !== false) ? strlen(substr(strrchr((string)$left, '.'), 1)) : 0;
+        $rightScale = (strpos((string)$right, '.') !== false) ? strlen(substr(strrchr((string)$right, '.'), 1)) : 0;
+
         switch ($operator) {
             case '|':
                 return $left | $right;
@@ -124,47 +140,60 @@ class BinaryNode extends Node
             case '&':
                 return $left & $right;
             case '==':
-                return bccomp($left, $right, 9) === 0;
+                $scale = max($leftScale, $rightScale, self::SCALE);
+                return bccomp($left, $right, $scale) === 0;
             case '===':
-                return bccomp($left, $right, 9) === 0 && gettype($left) === gettype($right);
+                return $left === $right;
             case '!=':
-                return bccomp($left, $right, 9) !== 0;
+                $scale = max($leftScale, $rightScale, self::SCALE);
+                return bccomp($left, $right, $scale) !== 0;
             case '!==':
-                return bccomp($left, $right, 9) !== 0;
+                return $left !== $right;
             case '<':
-                return bccomp($left, $right, 9) === -1;
+                $scale = max($leftScale, $rightScale, self::SCALE);
+                return bccomp($left, $right, $scale) === -1;
             case '>':
-                return bccomp($left, $right, 9) === 1;
+                $scale = max($leftScale, $rightScale, self::SCALE);
+                return bccomp($left, $right, $scale) === 1;
             case '>=':
-                return bccomp($left, $right, 9) >= 0;
+                $scale = max($leftScale, $rightScale, self::SCALE);
+                return bccomp($left, $right, $scale) >= 0;
             case '<=':
-                return bccomp($left, $right, 9) <= 0;
+                $scale = max($leftScale, $rightScale, self::SCALE);
+                return bccomp($left, $right, $scale) <= 0;
             case 'not in':
                 return !\in_array($left, $right);
             case 'in':
                 return \in_array($left, $right);
             case '+':
-                return bcadd($left, $right, 9);
+                return bcadd($left, $right, self::SCALE);
             case '-':
-                return bcsub($left, $right, 9);
+                return bcsub($left, $right, self::SCALE);
             case '~':
                 return $left.$right;
             case '*':
-                return bcmul($left, $right, 9);
+                return bcmul($left, $right, self::SCALE);
             case '/':
-                if (0 == $right) {
+                if (bccomp($right, '0', self::SCALE) === 0) {
                     throw new \DivisionByZeroError('Division by zero.');
                 }
-                [$quot, $_] = bcdiv($left, $right, 9);
-                return $quot;
+                return bcdiv($left, $right, self::SCALE);
             case '%':
                 if (0 == $right) {
                     throw new \DivisionByZeroError('Modulo by zero.');
                 }
-                [$_, $rem] = bcdiv($left, $right, 9);
-                return $rem;
+                return $left % $right;
             case 'matches':
                 return $this->evaluateMatches($right, $left);
+            case '~~':
+                // 左 ~~ 右 を 左(右) として評価
+                $leftValue = $this->nodes['left']->evaluate($functions, $values);
+
+                if (isset($functions[$leftValue]) && isset($functions[$leftValue]['evaluator'])) {
+                    $result = call_user_func($functions[$leftValue]['evaluator'], $values, $right);
+                    return $result;
+                }
+                throw new \InvalidArgumentException("Function '{$leftValue}' is not defined");
         }
     }
 

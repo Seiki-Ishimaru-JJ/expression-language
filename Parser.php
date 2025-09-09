@@ -66,6 +66,7 @@ class Parser
             '+' => ['precedence' => 30, 'associativity' => self::OPERATOR_LEFT],
             '-' => ['precedence' => 30, 'associativity' => self::OPERATOR_LEFT],
             '~' => ['precedence' => 40, 'associativity' => self::OPERATOR_LEFT],
+            '~~' => ['precedence' => 500, 'associativity' => self::OPERATOR_LEFT],
             '*' => ['precedence' => 60, 'associativity' => self::OPERATOR_LEFT],
             '/' => ['precedence' => 60, 'associativity' => self::OPERATOR_LEFT],
             '%' => ['precedence' => 60, 'associativity' => self::OPERATOR_LEFT],
